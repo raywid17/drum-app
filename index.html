@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drum Virtual Gemini</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+
+        h1 { margin-bottom: 30px; letter-spacing: 2px; }
+
+        .drum-kit {
+            display: grid;
+            grid-template-areas: 
+                "crash . hihat"
+                "tom . ."
+                "snare kick .";
+            grid-template-columns: repeat(3, 130px);
+            grid-template-rows: repeat(3, 130px);
+            gap: 20px;
+            align-items: center;
+            justify-items: center;
+        }
+
+        .pad {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #444, #111);
+            border: 4px solid #888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.05s ease;
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            user-select: none;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Penempatan & Warna Spesifik */
+        .kick { grid-area: kick; border-color: #e74c3c; width: 130px; height: 130px; font-size: 16px; }
+        .snare { grid-area: snare; border-color: #f1c40f; }
+        .hihat { grid-area: hihat; border-color: #2ecc71; width: 80px; height: 80px; }
+        .crash { grid-area: crash; border-color: #3498db; }
+        .tom { grid-area: tom; border-color: #9b59b6; }
+
+        .pad:active, .pad.active {
+            transform: scale(0.92);
+            box-shadow: 0 0 25px rgba(255,255,255,0.4);
+            background: #666;
+        }
+
+        .instructions {
+            margin-top: 40px;
+            padding: 15px 25px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            text-align: center;
+            color: #bdc3c7;
+        }
+
+        kbd {
+            background: #eee;
+            color: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>DRUM KIT PRO</h1>
+
+    <div class="drum-kit">
+        <div class="pad crash" data-key="e" onclick="playDrum('crash')">CRASH<br><kbd>E</kbd></div>
+        <div class="pad hihat" data-key="w" onclick="playDrum('hihat')">HI-HAT<br><kbd>W</kbd></div>
+        <div class="pad tom" data-key="s" onclick="playDrum('tom')">TOM<br><kbd>S</kbd></div>
+        <div class="pad snare" data-key="a" onclick="playDrum('snare')">SNARE<br><kbd>A</kbd></div>
+        <div class="pad kick" data-key=" " onclick="playDrum('kick')">KICK BASS<br><kbd>Space</kbd></div>
+    </div>
+
+    <div class="instructions">
+        Gunakan Mouse atau Keyboard:<br>
+        <strong>A (Snare) | S (Tom) | W (Hi-hat) | E (Crash) | Spasi (Kick)</strong>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playDrum(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const now = audioCtx.currentTime;
+            const gain = audioCtx.createGain();
+            gain.connect(audioCtx.destination);
+
+            if (type === 'kick') {
+                const osc = audioCtx.createOscillator();
+                osc.connect(gain);
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.5);
+                gain.gain.setValueAtTime(1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } 
+            else if (type === 'snare') {
+                const node = audioCtx.createBufferSource();
+                const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+                node.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 1000;
+                node.connect(filter);
+                filter.connect(gain);
+                gain.gain.setValueAtTime(0.6, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                node.start(now);
+            }
+            else if (type === 'hihat') {
+                const node = audioCtx.createBufferSource();
+                const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+                node.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 8000;
+                node.connect(filter);
+                filter.connect(gain);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                node.start(now);
+            }
+            else if (type === 'tom') {
+                const osc = audioCtx.createOscillator();
+                osc.connect(gain);
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.3);
+                gain.gain.setValueAtTime(0.8, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+            else if (type === 'crash') {
+                const node = audioCtx.createBufferSource();
+                const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 1.0, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+                node.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 3000;
+                node.connect(filter);
+                filter.connect(gain);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+                node.start(now);
+            }
+        }
+
+        // Kontrol Keyboard
+        window.addEventListener('keydown', (e) => {
+            const key = e.key === " " ? " " : e.key.toLowerCase();
+            const el = document.querySelector(`.pad[data-key="${key}"]`);
+            if (el && !el.classList.contains('active')) {
+                el.classList.add('active');
+                el.click(); // Memicu fungsi playDrum via click
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key === " " ? " " : e.key.toLowerCase();
+            const el = document.querySelector(`.pad[data-key="${key}"]`);
+            if (el) el.classList.remove('active');
+        });
+    </script>
+</body>
+</html>
